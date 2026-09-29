@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gram Utsav Pay - Public Portal</title>
+    
+    <!-- PWA / APP INSTALL TAGS -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1e1b4b">
+    <link rel="apple-touch-icon" href="./images/icon-192.png">
+
+    <style>
+        /* --- GLOBAL & THEME --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #1e1b4b, #0f172a, #1e1b4b); background-size: 400% 400%; color: white; min-height: 100vh; padding-bottom: 2rem; animation: gradientBG 15s ease infinite; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        /* --- NAVBAR --- */
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .logo { font-weight: bold; font-size: 1.2rem; letter-spacing: 1px; }
+        .admin-trigger { background: rgba(0,0,0,0.4); padding: 0.6rem 1.2rem; border-radius: 20px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: 0.3s; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .admin-trigger:hover { background: rgba(59, 130, 246, 0.3); }
+        .admin-logged-in { background: rgba(34, 197, 94, 0.3); border-color: rgba(34, 197, 94, 0.6); }
+
+        /* --- COMPACT PUJA CARDS WITH IMAGE SLIDERS --- */
+        .puja-cards { display: flex; gap: 1.2rem; padding: 1.5rem 2rem; overflow-x: auto; scrollbar-width: none; }
+        .card { 
+            flex: 1; min-width: 200px; padding: 1rem; 
+            border-radius: 16px; text-align: center; background: rgba(0, 0, 0, 0.3); 
+            backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); 
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; opacity: 0.7; 
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .card.active { opacity: 1; transform: scale(1.02); border-width: 2px; }
+        .card h3 { font-size: 1.05rem; margin-top: 0.5rem; letter-spacing: 1px; }
+
+        .slider-wrapper { width: 100%; height: 90px; border-radius: 10px; overflow: hidden; position: relative; background: rgba(255, 255, 255, 0.05); }
+        .slider-track { display: flex; width: 300%; height: 100%; animation: cardSlide 12s infinite cubic-bezier(0.8, 0, 0.2, 1); }
+        .slide-img { width: 33.333%; height: 100%; background-size: cover; background-position: center; }
+        
+        @keyframes cardSlide {
+            0%, 25% { transform: translateX(0); }
+            33.33%, 58.33% { transform: translateX(-33.333%); }
+            66.66%, 91.66% { transform: translateX(-66.666%); }
+            100% { transform: translateX(0); }
+        }
+
+        .card-red.active { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); border-color: rgba(239, 68, 68, 0.8); }
+        .card-purple.active { box-shadow: 0 0 20px rgba(168, 85, 247, 0.6); border-color: rgba(168, 85, 247, 0.8); }
+        .card-green.active { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); border-color: rgba(34, 197, 94, 0.8); }
+        .card-blue.active { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); border-color: rgba(59, 130, 246, 0.8); }
+
+        /* --- FINANCIAL SUMMARY PANEL --- */
+        .summary-panel { margin: 0 2rem 1.5rem 2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .summary-box { flex: 1; min-width: 150px; background: rgba(0, 0, 0, 0.4); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; backdrop-filter: blur(5px); }
+        .summary-box h4 { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px; font-weight: normal; }
+        .summary-box .val { font-size: 1.3rem; font-weight: bold; }
+        .val-green { color: #4ade80; }
+        .val-orange { color: #fb923c; }
+
+        /* --- LIST & SEARCH CONTAINER --- */
+        .list-container { margin: 0 2rem; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 1.5rem; overflow-x: auto; }
+        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .local-search { flex: 1; min-width: 250px; padding: 1rem 1.5rem; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.3); color: white; font-size: 1rem; outline: none; }
+
+        /* --- ADMIN CONTROLS --- */
+        .admin-controls { display: none; gap: 10px; margin-right: auto; }
+        body.admin-mode .admin-controls { display: flex; }
+        
+        #resetPujaBtn, #exportBtn, #filterBtn { 
+            padding: 0.6rem 1.2rem; border-radius: 20px; 
+            font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        #resetPujaBtn { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; }
+        #resetPujaBtn:hover { background: #ef4444; color: white; }
+        
+        #exportBtn { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #93c5fd; }
+        #exportBtn:hover { background: #3b82f6; color: white; }
+
+        #filterBtn { background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.5); color: #fcd34d; }
+        #filterBtn:hover { background: #f59e0b; color: white; }
+
+        /* --- PUBLIC VILLAGER ROWS --- */
+        .villager-row { 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 1.2rem 1.5rem; margin-bottom: 1rem; 
+            background: #252a4a; border-radius: 12px; transition: 0.2s; min-width: 650px; 
+        }
+        body.admin-mode .villager-row { cursor: pointer; }
+        body.admin-mode .villager-row:hover { background: #2d3359; }
+        
+        .v-info { display: flex; align-items: flex-start; gap: 1rem; flex: 1.5; }
+        .v-number { font-weight: bold; font-size: 1.1rem; line-height: 1.2; min-width: 25px; }
+        .v-details { display: flex; flex-direction: column; gap: 8px; }
+        .v-name { font-size: 1.15rem; font-weight: bold; line-height: 1.2; }
+        .v-phone-display { font-size: 0.9rem; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
+        
+        .call-icon { text-decoration: none; background: #22c55e; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+        .call-icon:hover { transform: scale(1.1); box-shadow: 0 0 15px rgba(34, 197, 94, 0.6); }
+
+        .v-fee { flex: 1; text-align: left; font-size: 1.05rem; color: #f8fafc; }
+        .v-status-container { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 1.5rem; }
+        .v-status { padding: 0.5rem 1.5rem; border-radius: 20px; font-weight: bold; font-size: 0.85rem; text-align: center; min-width: 110px; }
+        .status-unpaid { background: #4b5563; color: #cbd5e1; } 
+        .status-paid { background: #22c55e; color: white; } 
+
+        /* --- ACTION BUTTONS --- */
+        .action-btns { display: flex; gap: 12px; align-items: center; }
+        .print-btn, .whatsapp-btn { background: transparent; border: none; color: white; cursor: pointer; transition: transform 0.2s; display: none; font-size: 1.2rem; }
+        .print-btn:hover, .whatsapp-btn:hover { transform: scale(1.1); }
+        
+        .pay-btn { background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 0.4rem 1rem; border-radius: 15px; font-weight: bold; cursor: pointer; transition: 0.2s; display: none; font-size: 0.85rem; }
+        .pay-btn:hover { background: #3b82f6; color: white; }
+        
+        .villager-row[data-status="unpaid"] .pay-btn { display: inline-flex; align-items: center; justify-content: center; }
+        .villager-row[data-status="paid"] .print-btn { display: inline-flex; align-items: center; justify-content: center; }
+        body.admin-mode .villager-row .whatsapp-btn { display: inline-flex; align-items: center; justify-content: center; }
+        body.admin-mode .pay-btn { display: none !important; }
+
+        /* --- MODALS OVERLAY --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: linear-gradient(135deg, #1e293b, #0f172a); padding: 2rem; border-radius: 16px; width: 90%; max-width: 400px; border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; position: relative; }
+        .modal h2 { margin-bottom: 0.5rem; }
+        .modal p { color: #cbd5e1; margin-bottom: 1.5rem; font-size: 1.1rem; }
+        
+        .action-btn { width: 100%; padding: 1rem; border-radius: 30px; border: none; font-weight: bold; font-size: 1.1rem; cursor: pointer; background: #eab308; color: black; margin-bottom: 10px; transition: 0.2s; }
+        .action-btn:hover { filter: brightness(1.1); }
+        .btn-blue { background: #3b82f6; color: white; }
+        .wa-submit-btn { background: #25D366; color: white; } 
+        .close-btn { background: transparent; color: white; border: 1px solid white; border-radius: 30px; padding: 0.8rem; width: 100%; cursor: pointer; margin-top: 5px; }
+        
+        .input-group { text-align: left; margin-bottom: 1.2rem; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #cbd5e1; }
+        .input-group input { width: 100%; padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.3); color: white; outline: none; }
+        .login-submit { background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: white; }
+        .error-msg { color: #ef4444; font-size: 0.85rem; display: none; margin-top: -10px; margin-bottom: 10px; }
+
+        /* --- MOBILE ADJUSTMENTS --- */
+        @media (max-width: 768px) {
+            .puja-cards { padding: 1rem 0.5rem; }
+            .card { min-width: 160px; padding: 0.8rem; }
+            .slider-wrapper { height: 75px; margin-bottom: 10px; }
+            .card h3 { font-size: 0.95rem; }
+            .summary-panel { margin: 0 0.5rem 1.5rem 0.5rem; }
+            .list-container { margin: 0 0.5rem; padding: 0.9rem; overflow-x: hidden !important; }
+
+            body.admin-mode .admin-controls { gap: 5px !important; flex-wrap: nowrap; width: 100%; }
+            body.admin-mode #resetPujaBtn, body.admin-mode #exportBtn, body.admin-mode #filterBtn {
+                flex: 1; padding: 0.5rem 0.3rem !important; font-size: 0.75rem !important; white-space: nowrap; border-radius: 999px;
+            }
+
+            body:not(.admin-mode) .villager-row {
+                display: grid !important; grid-template-columns: auto auto 1fr !important; grid-template-rows: auto auto !important;
+                gap: 0.3rem 0.6rem !important; align-items: center !important; padding: 0.85rem !important; min-width: 0 !important;
+            }
+            body:not(.admin-mode) .villager-row .v-info, body:not(.admin-mode) .villager-row .v-details { display: contents !important; }
+            body:not(.admin-mode) .villager-row .v-number { grid-column: 1; grid-row: 1 / 3; align-self: start; margin-top: 0.2rem; }
+            body:not(.admin-mode) .villager-row .v-name { grid-column: 2 / 4; grid-row: 1; margin-bottom: 0.1rem; font-size: 1.08rem; }
+            body:not(.admin-mode) .villager-row .v-phone-display { grid-column: 2; grid-row: 2; white-space: nowrap; font-size: 0.85rem; }
+            body:not(.admin-mode) .villager-row .v-status-container {
+                grid-column: 3; grid-row: 2; display: flex !important; flex-direction: row-reverse !important; 
+                justify-content: flex-end !important; gap: 0.5rem !important; width: auto !important; margin: 0 !important; padding: 0 !important; border: none !important;
+            }
+            body:not(.admin-mode) .villager-row .action-btns { margin: 0 !important; flex: none !important; }
+            body:not(.admin-mode) .villager-row .v-fee, body:not(.admin-mode) .villager-row .print-btn { display: none !important; }
+
+            body.admin-mode .villager-row {
+                display: grid !important; grid-template-columns: 1fr auto; grid-template-areas: "info fee" "status status";
+                gap: 0.2rem 0.65rem; align-items: center; width: 100%; min-width: 0 !important; padding: 0.78rem 0.78rem !important;
+                background: linear-gradient(135deg, rgba(37, 42, 74, 0.98), rgba(18, 23, 43, 0.98));
+            }
+            body.admin-mode .v-info { grid-area: info; width: 100% !important; min-width: 0; }
+            body.admin-mode .v-fee { grid-area: fee; width: auto !important; justify-self: end; align-self: start; margin: 0 !important; padding: 0.4rem 0.6rem !important; border-radius: 8px; background: rgba(255,255,255,0.08); }
+            body.admin-mode .v-status-container {
+                grid-area: status; width: 100% !important; margin-top: 0 !important; padding-top: 0.3rem !important; 
+                border-top: none !important; display: flex; align-items: center; justify-content: flex-start !important; gap: 0.75rem !important; flex-wrap: wrap; 
+            }
+            body.admin-mode .action-btns { flex: none !important; justify-content: flex-start !important; gap: 10px !important; flex-wrap: nowrap !important; }
+            body.admin-mode .print-btn, body.admin-mode .whatsapp-btn { width: 38px !important; height: 38px !important; border-radius: 999px !important; flex: none; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); }
+            body.admin-mode .v-status { min-width: 74px !important; padding: 0.38rem 0.72rem !important; font-size: 0.72rem !important; }
+        }
+
+        /* --- PRINT RECEIPT --- */
+        .receipt-template { display: none; }
+        @media print {
+            @page { size: A4 landscape; margin: 0; }
+            body * { visibility: hidden; }
+            body { background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .receipt-template, .receipt-template * { visibility: visible; }
+            .receipt-template { display: block; position: absolute; top: 0; left: 0; width: 130mm; height: 90mm; margin: 5mm; padding: 15mm; background: white; color: black; border-radius: 8px; overflow: hidden; }
+            .receipt-content { position: relative; z-index: 2; }
+            .receipt-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; opacity: 0.08; z-index: 1; }
+            .receipt-header { border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }
+            .receipt-header h2 { font-size: 22px; margin-bottom: 5px; }
+            .receipt-header h3 { font-size: 16px; font-weight: normal; color: #555; }
+            .receipt-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
+            .receipt-total { margin-top: 15px; font-size: 18px; font-weight: bold; text-align: right; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 5px;}
+            .signature { margin-top: 25px; display: flex; justify-content: space-between; font-size: 12px; font-weight: bold;}
+            
+            .print-durga { border: 4px double #dc2626; }
+            .print-durga .receipt-header h2 { color: #dc2626; }
+            .print-durga .receipt-header { border-bottom-color: #dc2626; }
+            .print-kali { border: 4px double #7e22ce; }
+            .print-kali .receipt-header h2 { color: #7e22ce; }
+            .print-kali .receipt-header { border-bottom-color: #7e22ce; }
+            .print-lakshmi { border: 4px double #16a34a; }
+            .print-lakshmi .receipt-header h2 { color: #16a34a; }
+            .print-lakshmi .receipt-header { border-bottom-color: #16a34a; }
+            .print-saraswati { border: 4px double #2563eb; }
+            .print-saraswati .receipt-header h2 { color: #2563eb; }
+            .print-saraswati .receipt-header { border-bottom-color: #2563eb; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo">GRAM UTSAV PAY</div>
+        <div class="admin-trigger" id="adminToggleBtn" onclick="toggleAuth()">🔒 Admin Access</div>
+    </header>
+
+    <main>
+        <div class="puja-cards">
+            <!-- DURGA PUJA SLIDER -->
+            <div class="card card-red active" onclick="switchPuja('Durga Puja')">
+                <div class="slider-wrapper">
+                    <div class="slider-track" style="animation-delay: 0s;">
+                        <div class="slide-img" style="background-image: url('./images/durga1.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/durga2.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/durga3.jpg');"></div>
+                    </div>
+                </div>
+                <h3>DURGA PUJA</h3>
+            </div>
+            
+            <!-- KALI PUJA SLIDER -->
+            <div class="card card-purple" onclick="switchPuja('Kali Puja')">
+                <div class="slider-wrapper">
+                    <div class="slider-track" style="animation-delay: -3s;">
+                        <div class="slide-img" style="background-image: url('./images/kali1.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/kali2.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/kali3.jpg');"></div>
+                    </div>
+                </div>
+                <h3>KALI PUJA</h3>
+            </div>
+            
+            <!-- LAKSHMI PUJA SLIDER -->
+            <div class="card card-green" onclick="switchPuja('Lakshmi Puja')">
+                <div class="slider-wrapper">
+                    <div class="slider-track" style="animation-delay: -6s;">
+                        <div class="slide-img" style="background-image: url('./images/lakshmi1.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/lakshmi2.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/lakshmi3.jpg');"></div>
+                    </div>
+                </div>
+                <h3>LAKSHMI PUJA</h3>
+            </div>
+            
+            <!-- SARASWATI PUJA SLIDER -->
+            <div class="card card-blue" onclick="switchPuja('Saraswati Puja')">
+                <div class="slider-wrapper">
+                    <div class="slider-track" style="animation-delay: -9s;">
+                        <div class="slide-img" style="background-image: url('./images/saraswati1.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/saraswati2.jpg');"></div>
+                        <div class="slide-img" style="background-image: url('./images/saraswati3.jpg');"></div>
+                    </div>
+                </div>
+                <h3>SARASWATI PUJA</h3>
+            </div>
+        </div>
+
+        <div class="summary-panel" id="summaryPanel">
+            <div class="summary-box">
+                <h4>Villagers Paid</h4>
+                <div class="val" id="sumPeople">0 / 0</div>
+            </div>
+            <div class="summary-box">
+                <h4>Total Expected</h4>
+                <div class="val">₹<span id="sumExpected">0</span></div>
+            </div>
+            <div class="summary-box">
+                <h4>Total Collected</h4>
+                <div class="val val-green">₹<span id="sumCollected">0</span></div>
+            </div>
+            <div class="summary-box">
+                <h4>Pending Amount</h4>
+                <div class="val val-orange">₹<span id="sumPending">0</span></div>
+            </div>
+        </div>
+
+        <section class="list-container">
+            <div class="list-header">
+                <h2 id="currentPujaTitle">Durga Puja Directory</h2>
+                <div class="admin-controls">
+                    <button id="resetPujaBtn" onclick="confirmResetYear()">🔄 Reset</button>
+                    <button id="exportBtn" onclick="exportMasterList()">📥 Export</button>
+                    <button id="filterBtn" onclick="toggleFilter()">🔽 Filter Unpaid</button>
+                </div>
+                <input type="text" id="searchInput" class="local-search" placeholder="Search Villager Name..." onkeyup="searchVillager()" inputmode="search">
+            </div>
+            <div class="villager-list" id="villagerListContainer"></div>
+        </section>
+    </main>
+
+    <!-- NEW PIN LOGIN MODAL -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <h2>Admin Access</h2>
+            <p>Enter PIN to edit records</p>
+            <form onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label>Security PIN</label>
+                    <input type="password" id="adminPin" placeholder="Enter 4-digit PIN" required inputmode="numeric" pattern="[0-9]*">
+                </div>
+                <div class="error-msg" id="loginError">Incorrect PIN.</div>
+                <button type="submit" class="action-btn login-submit">LOGIN</button>
+                <button type="button" class="close-btn" onclick="closeModals()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h2 id="modalName">Villager Name</h2>
+            <p id="modalFee">Fee: ₹0</p>
+            <div class="input-group">
+                <label>Contact Number (Database)</label>
+                <input type="number" id="editPhoneInput" placeholder="Enter phone number" inputmode="numeric">
+            </div>
+            <button class="action-btn btn-blue" id="savePhoneBtn" onclick="saveOnlyPhone()">SAVE NUMBER</button>
+            <button class="action-btn" id="markPaidBtn" onclick="markAsPaidAction()">MARK AS PAID</button>
+            <button class="close-btn" onclick="closeModals()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="waPhoneModal">
+        <div class="modal">
+            <h2>WhatsApp Details</h2>
+            <p>Send receipt to <strong id="waModalName">Name</strong></p>
+            <div class="input-group">
+                <label>Phone Number (Include Country Code)</label>
+                <input type="number" id="manualWaNumber" placeholder="919876543210" required inputmode="numeric">
+            </div>
+            <button class="action-btn wa-submit-btn" onclick="submitManualWhatsApp()">SEND MESSAGE</button>
+            <button class="close-btn" onclick="closeModals()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="upiModal">
+        <div class="modal">
+            <h2>Pay via UPI</h2>
+            <p>Payment for <strong id="upiModalName">Name</strong></p>
+            <div style="background: white; padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 15px;">
+                <img id="upiQRCode" src="" alt="UPI QR Code" style="width: 180px; height: 180px;">
+            </div>
+            <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">
+                * Scan with GPay, PhonePe, etc.<br>
+                <strong>Important:</strong> Please type the exact amount manually in your app.
+            </p>
+            <button class="action-btn btn-blue" id="openUpiAppBtn">OPEN UPI APP</button>
+            <button class="close-btn" onclick="closeModals()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="receipt-template" id="printArea">
+        <div class="receipt-watermark" id="receiptWatermark">🌺</div>
+        <div class="receipt-content">
+            <div class="receipt-header">
+                <h2 id="receiptHeading">গ্রাম উৎসব কমিটি</h2>
+                <h3 id="receiptSubHeading">Official Payment Receipt</h3>
+            </div>
+            <div class="receipt-row"><strong>Received From:</strong> <span id="receiptName">Name</span></div>
+            <div class="receipt-row"><strong>Festival:</strong> <span id="receiptEvent">Event</span></div>
+            <div class="receipt-row"><strong>Date:</strong> <span id="receiptDate">Date</span></div>
+            <div class="receipt-row"><strong>Status:</strong> <span>PAID ✅</span></div>
+            <div class="receipt-total">Total Paid: ₹<span id="receiptAmount">0</span></div>
+            <div class="signature">
+                <span>Villager Signature: ______________</span>
+                <span>Authorized Signatory: ______________</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const callSVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>`;
+        const downloadSVG = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+
+        let villagersData = [];
+        let currentPuja = 'Durga Puja';
+        let isAdminLoggedIn = false;
+        let selectedVillagerId = null;
+        let pendingWaData = null; 
+        let filterUnpaidFirst = false;
+
+        // SAFELY Translates Bengali numbers to English
+        function parseBengaliNum(str) {
+            if (!str) return 0;
+            const bengaliToEnglish = {'০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9'};
+            let engStr = String(str).replace(/[০-৯]/g, match => bengaliToEnglish[match]).replace(/,/g, '');
+            let num = parseInt(engStr, 10);
+            return isNaN(num) ? 0 : num;
+        }
+
+        // CRASH-PROOF CSV text splitter
+        function safeSplitCSV(row) {
+            const columns = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                let char = row[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    columns.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            columns.push(current.trim());
+            return columns;
+        }
+
+        // TRIPLE FALLBACK NETWORK FETCHER (Guarantees it bypasses CORS blocks)
+        async function fetchCSVData(url) {
+            try {
+                let res1 = await fetch(url);
+                if (res1.ok) return await res1.text();
+            } catch (e) { console.log("Direct connection blocked. Using Proxy 1..."); }
+
+            try {
+                let res2 = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+                if (res2.ok) return await res2.text();
+            } catch (e) { console.log("Proxy 1 blocked. Using Proxy 2..."); }
+
+            try {
+                let res3 = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(url));
+                if (res3.ok) return await res3.text();
+            } catch (e) {
+                throw new Error("All network requests failed.");
+            }
+        }
+
+        async function loadGoogleSheet() {
+            const sheetCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRkE0Wo7HQ-kqjArXn0PRmjhZUcFk--tHQGukUwiOCm81PSnUs_hBJ_rQcB90anRQxdk6qwsJa0CAL4/pub?output=csv";
+
+            try {
+                document.getElementById('villagerListContainer').innerHTML = '<div style="text-align:center; padding: 2rem; color: #94a3b8;">Connecting to Database...</div>';
+                
+                const data = await fetchCSVData(sheetCsvUrl);
+                
+                if (data.toLowerCase().includes('<html')) {
+                    alert("ERROR: The link returned HTML. Make sure your sheet is set to 'Anyone with the link' and published as CSV.");
+                    document.getElementById('villagerListContainer').innerHTML = '<div style="text-align:center; padding: 2rem; color: #ef4444;">Failed: Please check Google Sheets sharing settings.</div>';
+                    return;
+                }
+
+                const rows = data.split(/\r?\n/);
+                
+                let dataStartIndex = 1;
+                for (let i = 0; i < rows.length; i++) {
+                    if (rows[i].includes('নাম') || rows[i].includes('মোট') || rows[i].includes('Name')) {
+                        dataStartIndex = i + 1;
+                        break;
+                    }
+                }
+
+                const dataRows = rows.slice(dataStartIndex);
+                let nextId = 1;
+                let addedCount = 0;
+                
+                villagersData = [];
+
+                dataRows.forEach(row => {
+                    if (row.trim() === '') return;
+                    
+                    const columns = safeSplitCSV(row);
+
+                    if (columns.length >= 2) {
+                        const name = columns[1] ? columns[1].replace(/"/g, '') : '';
+                        
+                        if (name !== '' && name !== 'NaN' && !name.includes('নাম') && !name.includes('Name')) { 
+                            let chandaRaw = columns[2] ? columns[2].replace(/"/g, '') : '0';
+                            let shahlaRaw = columns[3] ? columns[3].replace(/"/g, '') : '0';
+                            let feeRaw = columns[4] ? columns[4].replace(/"/g, '') : '0';
+
+                            villagersData.push({
+                                id: nextId++,
+                                name: name,                             
+                                chanda: parseBengaliNum(chandaRaw),
+                                shahla: parseBengaliNum(shahlaRaw),
+                                fee: parseBengaliNum(feeRaw),
+                                phone: columns[5] ? columns[5].replace(/"/g, '') : '', 
+                                status: columns[6] && columns[6].replace(/"/g, '') !== '' ? columns[6].replace(/"/g, '').toLowerCase() : 'unpaid',
+                                puja: columns[7] && columns[7].replace(/"/g, '') !== '' ? columns[7].replace(/"/g, '') : 'Durga Puja'
+                            });
+                            addedCount++;
+                        }
+                    }
+                });
+
+                renderList();
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                document.getElementById('villagerListContainer').innerHTML = '<div style="text-align:center; padding: 2rem; color: #ef4444;">Network Error. Please make sure you are connected to the internet.</div>';
+            }
+        }
+
+        window.onload = () => loadGoogleSheet();
+
+        function toggleFilter() {
+            filterUnpaidFirst = !filterUnpaidFirst;
+            let btn = document.getElementById('filterBtn');
+            if (filterUnpaidFirst) {
+                btn.innerHTML = '🔃 Serial Order';
+                btn.style.color = 'white'; btn.style.background = '#f59e0b';
+            } else {
+                btn.innerHTML = '🔽 Filter Unpaid';
+                btn.style.color = '#fcd34d'; btn.style.background = 'rgba(245, 158, 11, 0.2)';
+            }
+            renderList();
+        }
+
+        function renderList() {
+            document.getElementById('currentPujaTitle').innerText = currentPuja + " Directory";
+            const container = document.getElementById('villagerListContainer');
+            container.innerHTML = '';
+
+            const filteredVillagers = villagersData.filter(v => v.puja === currentPuja).map((v, index) => {
+                return { ...v, serialNumber: index + 1 };
+            });
+
+            if (filterUnpaidFirst) {
+                filteredVillagers.sort((a, b) => {
+                    if (a.status === 'unpaid' && b.status === 'paid') return -1;
+                    if (a.status === 'paid' && b.status === 'unpaid') return 1;
+                    return 0; 
+                });
+            }
+
+            let totalVillagers = filteredVillagers.length;
+            let paidVillagers = filteredVillagers.filter(v => v.status === 'paid').length;
+            let totalExpected = 0; let totalCollected = 0;
+
+            filteredVillagers.forEach(v => {
+                totalExpected += v.fee;
+                if(v.status === 'paid') totalCollected += v.fee;
+            });
+
+            document.getElementById('sumPeople').innerText = `${paidVillagers} / ${totalVillagers}`;
+            document.getElementById('sumExpected').innerText = totalExpected.toLocaleString('en-IN');
+            document.getElementById('sumCollected').innerText = totalCollected.toLocaleString('en-IN');
+            document.getElementById('sumPending').innerText = (totalExpected - totalCollected).toLocaleString('en-IN');
+
+            filteredVillagers.forEach((v) => {
+                const isPaid = v.status === 'paid';
+                const statusClass = isPaid ? 'status-paid' : 'status-unpaid';
+                const statusText = isPaid ? 'PAID' : 'UNPAID';
+
+                let autoWaBtn = '';
+                let phoneDisplay = '<span style="font-size: 0.8rem; opacity: 0.5;">No Number Saved</span>';
+                
+                if (v.phone && v.phone.trim() !== '') {
+                    autoWaBtn = `<button class="whatsapp-btn" title="Send to saved number" onclick="dispatchWhatsAppMessage(event, '${v.name}', ${v.fee}, '${v.puja}', '${v.phone}', '${v.status}')">📲</button>`;
+                    const cleanPhone = v.phone.replace(/\D/g, ''); 
+                    phoneDisplay = `+${v.phone} <a href="tel:+${cleanPhone}" class="call-icon" onclick="event.stopPropagation()">${callSVG}</a>`;
+                }
+
+                const row = document.createElement('div');
+                row.className = 'villager-row';
+                row.setAttribute('data-status', v.status);
+                row.onclick = () => { if(isAdminLoggedIn) openEditModal(v.id); };
+
+                const feeHTML = isAdminLoggedIn 
+                    ? `<div class="v-fee" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 0.4rem 0.6rem; border-radius: 8px; line-height: 1;">
+                         <span style="font-size: 0.75rem; font-weight: normal; color: #cbd5e1; white-space: nowrap;">চাঁদা: ₹${v.chanda} | শহলা: ₹${v.shahla}</span>
+                         <span style="font-size: 0.95rem; font-weight: bold; color: white;">মোট: ₹${v.fee}</span>
+                       </div>` 
+                    : '';
+
+                const publicPayBtn = (!isAdminLoggedIn && !isPaid) ? `<button class="pay-btn" title="Pay Online" onclick="openUPIModal(event, '${v.name}', '${v.puja}')">UPI 💳</button>` : '';
+                const adminReceiptBtn = isAdminLoggedIn ? (isPaid ? `<button class="print-btn" title="Download Receipt" onclick="printReceipt(event, ${v.id})">${downloadSVG}</button>` : '') : '';
+                const adminWhatsAppBtn = isAdminLoggedIn ? `${autoWaBtn}<button class="whatsapp-btn" title="Send to custom number" onclick="openWaModal(event, ${v.id}, '${v.name}', ${v.fee}, '${v.puja}', '${v.phone}', '${v.status}')">✏️📲</button>` : '';
+
+                row.innerHTML = `
+                    <div class="v-info">
+                        <span class="v-number">${v.serialNumber}.</span>
+                        <div class="v-details">
+                            <span class="v-name">${v.name}</span>
+                            <span class="v-phone-display">${phoneDisplay}</span>
+                        </div>
+                    </div>
+                    ${feeHTML}
+                    <div class="v-status-container">
+                        <div class="v-status ${statusClass}">${statusText}</div>
+                        <div class="action-btns">
+                            ${publicPayBtn}
+                            ${adminReceiptBtn}
+                            ${adminWhatsAppBtn}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function switchPuja(pujaName) {
+            currentPuja = pujaName;
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => card.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById('searchInput').value = '';
+            renderList();
+        }
+
+        function toggleAuth() {
+            if (isAdminLoggedIn) {
+                isAdminLoggedIn = false;
+                document.body.classList.remove('admin-mode');
+                let btn = document.getElementById('adminToggleBtn');
+                btn.innerHTML = '🔒 Admin Access';
+                btn.classList.remove('admin-logged-in');
+                renderList(); 
+            } else {
+                document.getElementById('loginModal').style.display = 'flex';
+                document.getElementById('adminPin').value = ''; 
+                document.getElementById('loginError').style.display = 'none';
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const pinInput = document.getElementById('adminPin').value;
+
+            if (pinInput === '4499') {
+                isAdminLoggedIn = true;
+                closeModals();
+                document.body.classList.add('admin-mode');
+                let btn = document.getElementById('adminToggleBtn');
+                btn.innerHTML = '🔓 Admin - Logout';
+                btn.classList.add('admin-logged-in');
+                renderList(); 
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function openEditModal(id) {
+            const villager = villagersData.find(v => v.id === id);
+            selectedVillagerId = id;
+            
+            document.getElementById('modalName').innerText = villager.name;
+            document.getElementById('modalFee').innerText = "Fee: ₹" + villager.fee;
+            document.getElementById('editPhoneInput').value = villager.phone;
+            
+            let paidBtn = document.getElementById('markPaidBtn');
+            if(villager.status === 'paid') {
+                paidBtn.innerText = "ALREADY PAID"; paidBtn.style.background = "#22c55e"; paidBtn.disabled = true;
+            } else {
+                paidBtn.innerText = "MARK AS PAID"; paidBtn.style.background = "#eab308"; paidBtn.disabled = false;
+            }
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function saveOnlyPhone() {
+            const index = villagersData.findIndex(v => v.id === selectedVillagerId);
+            if(index !== -1) { villagersData[index].phone = document.getElementById('editPhoneInput').value; }
+            closeModals(); renderList(); 
+        }
+
+        function markAsPaidAction() {
+            const index = villagersData.findIndex(v => v.id === selectedVillagerId);
+            if(index !== -1) {
+                villagersData[index].status = 'paid';
+                villagersData[index].phone = document.getElementById('editPhoneInput').value;
+            }
+            closeModals(); renderList(); 
+        }
+
+        function exportMasterList() {
+            const filtered = villagersData.filter(v => v.puja === currentPuja);
+            let csvContent = "data:text/csv;charset=utf-8,Name,Phone Number,Chanda,Shahla,Total Fee (INR),Status\n";
+            filtered.forEach(v => {
+                let phoneStr = (v.phone && v.phone !== '') ? `'${v.phone}` : "No Number";
+                csvContent += `${v.name},${phoneStr},${v.chanda},${v.shahla},${v.fee},${v.status.toUpperCase()}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${currentPuja}_MasterList.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function confirmResetYear() {
+            if (confirm(`⚠️ WARNING: Reset all payments for ${currentPuja}?`)) {
+                villagersData.forEach(v => { if (v.puja === currentPuja) v.status = 'unpaid'; });
+                renderList(); alert(`Success! All records reset.`);
+            }
+        }
+
+        function closeModals() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('waPhoneModal').style.display = 'none';
+            document.getElementById('upiModal').style.display = 'none';
+        }
+
+        function searchVillager() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let rows = document.getElementsByClassName('villager-row');
+            for (let i = 0; i < rows.length; i++) {
+                let name = rows[i].querySelector('.v-name').innerText.toLowerCase();
+                rows[i].style.display = name.includes(input) ? "flex" : "none";
+            }
+        }
+
+        function printReceipt(event, id) {
+            event.stopPropagation();
+            const villager = villagersData.find(v => v.id === id);
+            
+            document.getElementById('receiptName').innerText = villager.name;
+            document.getElementById('receiptAmount').innerText = villager.fee;
+            document.getElementById('receiptEvent').innerText = villager.puja;
+            document.getElementById('receiptDate').innerText = new Date().toLocaleDateString('en-IN');
+            
+            const printArea = document.getElementById('printArea');
+            const rHeading = document.getElementById('receiptHeading');
+            const rSubHeading = document.getElementById('receiptSubHeading');
+            const rWatermark = document.getElementById('receiptWatermark');
+
+            if (villager.puja === 'Durga Puja') {
+                printArea.className = "receipt-template print-durga"; rHeading.innerText = "শারদীয়া দুর্গা পূজা উৎসব"; rSubHeading.innerText = "Sharadiya Durga Puja Receipt"; rWatermark.innerText = "🔱";
+            } else if (villager.puja === 'Kali Puja') {
+                printArea.className = "receipt-template print-kali"; rHeading.innerText = "শ্যামা পূজা ও দীপাবলি"; rSubHeading.innerText = "Shyama Puja Payment Receipt"; rWatermark.innerText = "🪔";
+            } else if (villager.puja === 'Lakshmi Puja') {
+                printArea.className = "receipt-template print-lakshmi"; rHeading.innerText = "কোজাগরী লক্ষ্মী পূজা"; rSubHeading.innerText = "Kojagari Lakshmi Puja Receipt"; rWatermark.innerText = "🌾";
+            } else if (villager.puja === 'Saraswati Puja') {
+                printArea.className = "receipt-template print-saraswati"; rHeading.innerText = "শ্রীপঞ্চমী সরস্বতী পূজা"; rSubHeading.innerText = "Sripanchami Saraswati Puja Receipt"; rWatermark.innerText = "🦢";
+            }
+            window.print();
+        }
+
+        function openUPIModal(event, name, puja) {
+            event.stopPropagation(); 
+            document.getElementById('upiModalName').innerText = name;
+            const yourUpiID = "committee@sbi"; 
+            const note = `Payment for ${name} - ${puja}`;
+            const upiString = `upi://pay?pa=${yourUpiID}&pn=Gram%20Utsav%20Committee&tn=${encodeURIComponent(note)}`;
+            document.getElementById('upiQRCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
+            document.getElementById('openUpiAppBtn').onclick = () => { window.location.href = upiString; };
+            document.getElementById('upiModal').style.display = 'flex';
+        }
+
+        function openWaModal(event, id, name, amount, puja, phone, status) {
+            event.stopPropagation(); 
+            pendingWaData = { id, name, amount, puja, status }; 
+            document.getElementById('waModalName').innerText = name;
+            document.getElementById('manualWaNumber').value = (phone && phone.trim() !== '') ? phone : '91';
+            document.getElementById('waPhoneModal').style.display = 'flex';
+        }
+
+        function submitManualWhatsApp() {
+            const typedPhone = document.getElementById('manualWaNumber').value;
+            if (typedPhone.length < 10) { alert("Please enter a valid phone number."); return; }
+            const index = villagersData.findIndex(v => v.id === pendingWaData.id);
+            if(index !== -1) { villagersData[index].phone = typedPhone; }
+            dispatchWhatsAppMessage(null, pendingWaData.name, pendingWaData.amount, pendingWaData.puja, typedPhone, pendingWaData.status);
+            closeModals(); renderList(); 
+        }
+
+        function dispatchWhatsAppMessage(event, name, amount, puja, phone, status = 'paid') {
+            if(event) event.stopPropagation();
+            const today = new Date().toLocaleDateString('en-IN');
+            let greetingText = "🌺 🚩 *উৎসবে স্বাগতম* 🚩 🌺";
+            if (puja === 'Durga Puja') greetingText = "🌺 🚩 *শুভ শারদীয়া* 🚩 🌺";
+            else if (puja === 'Kali Puja') greetingText = "🪔 🚩 *শুভ দীপাবলি ও শ্যামা পূজা* 🚩 🪔";
+            else if (puja === 'Lakshmi Puja') greetingText = "🌾 🚩 *শুভ কোজাগরী লক্ষ্মী পূজা* 🚩 🌾";
+            else if (puja === 'Saraswati Puja') greetingText = "📚 🚩 *শুভ শ্রীপঞ্চমী* 🚩 📚";
+
+            let message = status === 'unpaid' 
+                ? `${greetingText}\n\nনমস্কার *${name}*,\nআসন্ন ${puja} উপলক্ষে গ্রাম উৎসব কমিটির পক্ষ থেকে আপনাকে আন্তরিক শুভেচ্ছা।\n\nআপনার পূজা অনুদান (₹${amount}) বকেয়া আছে। অনুগ্রহ করে আপনার অনুদান জমা দিয়ে উৎসবকে সর্বাঙ্গীণভাবে সফল করে তুলুন। 🙏\n\n- গ্রাম উৎসব কমিটি`
+                : `${greetingText}\n\nনমস্কার *${name}*,\nনিচে আপনার ডিজিটাল রসিদ দেওয়া হলো:\n\n🧾 *ই-রসিদ (E-Receipt)*\n-----------------------\n*উৎসব:* ${puja}\n*জমা রাশি:* ₹${amount}\n*তারিখ:* ${today}\n*স্ট্যাটাস:* সফল (PAID) ✅\n-----------------------\n\nগ্রাম উৎসব কমিটির পক্ষ থেকে আপনাকে আন্তরিক ধন্যবাদ! 🙏`;
+
+            const cleanPhone = phone.replace(/\D/g, ''); 
+            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+    </script>
+
+    <!-- REGISTER SERVICE WORKER FOR APP INSTALL -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registered! App ready to install.'))
+                    .catch(err => console.log('Service Worker failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
